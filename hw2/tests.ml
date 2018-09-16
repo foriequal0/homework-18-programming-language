@@ -23,6 +23,8 @@ let should_throw name f =
   end
   with _ -> ()
 
+module ValidIntListQ = (IntListQ : Queue)
+
 let main () = begin
   should_throw "ex1-free-var" (fun () -> calculate(SIGMA(INT 1, ADD(X,X), X)));
   assert_equal "ex1" 12.3 (calculate(INTEGRAL(REAL 1.0, REAL (-5.0), X)));
