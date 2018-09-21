@@ -35,7 +35,7 @@ let main () = begin
     assert_equal "ex2-non-positive-n" 0. (sumprod (matrix, 0, 7));
     assert_equal "ex2-non-positive-k" 1. (sumprod (matrix, 1, 0));
   end;
-  
+
   assert_equal "ex3"
     "(Norway ((Cameroon Poland) Sweden))"
     (parenize (NODE(LEAF Norway, NODE(NODE(LEAF Cameroon, LEAF Poland), LEAF Sweden))));

@@ -16,13 +16,9 @@ let calculate: exp -> float =
   let rec range a b =
     if a > b then [] else a :: range (a + 1) b in
   let step = 0.1 in
-  let rangef a b =
-    let epsilon = epsilon_float *. 10.0 in
-    let rec sub i =
-      let x = a +. step *. float i in
-      if x > b +. epsilon -. step then []
-      else x :: sub (i+1) in
-    sub 0 in
+  let epsilon = epsilon_float *. 100.0 in
+  let rec rangef a b =
+    if a > b -. step +. epsilon then [] else a :: rangef (a +. step) b in
   let sum r f = List.fold_left (fun a x -> a +. f x) 0.0 r in
   let rec eval exp var =
     match exp with
@@ -40,8 +36,12 @@ let calculate: exp -> float =
       let b_ = int_of_float(eval b var) in
       sum (range a_ b_) (fun x -> eval f (BOUND (float x)))
     | INTEGRAL (a, b, f) ->
-      let (sign, r) = if a <= b
-        then (1., rangef (eval a var) (eval b var))
-        else (-1., rangef (eval b var) (eval a var)) in
-      sign *. (sum r (fun x -> step *. eval f (BOUND x))) in
+      let a_ = eval a var in
+      let b_ = eval b var in
+      let (sign, r) = if a_ <= b_
+        then (1., rangef a_ b_)
+        else (-1., rangef b_ a_) in
+      begin
+        sign *. (sum r (fun x -> step *. eval f (BOUND x)))
+      end in
   fun exp -> eval exp FREE
