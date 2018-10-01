@@ -1,0 +1,82 @@
+[Header]
+
+let equals v1 v2 = (abs_float (v1 -. v2)) <= 1.0
+
+let test t answer =
+  let v = calculate t in
+  (* print_float v; print_newline (); *)
+  (equals v answer)
+
+
+[Test]
+let t1 : exp = ADD(INT 2, REAL 3.5) in
+test t1 5.5
+
+[Value]
+true
+
+[Test]
+let t2 : exp = DIV(REAL 3.0, INT 2) in
+test t2 1.5
+
+[Value]
+true
+
+[Test]
+let t31 : exp = ADD(INT 2, REAL 3.5) in
+let t32 : exp = MUL(INT 2, REAL 5.5) in
+let t33 : exp = DIV(t32, t31) in
+test t33 2.0
+
+[Value]
+true
+
+[Test]
+let t4 : exp = SIGMA (INT 1, INT 10, X) in
+test t4 55.0
+
+[Value]
+true
+
+[Test]
+let t5  : exp = INTEGRAL(INT 0, INT 10, INT 20) in
+test t5 200.
+
+[Value]
+true
+
+[Test]
+let t6  : exp = SIGMA (INT 1, INT 5, SIGMA (X, X, SIGMA (X, ADD (X, INT 1), X))) in
+test t6 35.0
+
+[Value]
+true
+
+[Test]
+calculate (SIGMA (INT 1, X, INTEGRAL (X, X, SIGMA (X, ADD (X, INT 1), X))))
+
+[Exception]
+FreeVariable
+
+[Test]
+let t7  : exp = SIGMA (INT 1, INT 3, SIGMA (INT 1, INT 5, X)) in
+test t7 45.0
+
+[Value]
+true
+
+[Test]
+let t8  : exp = SIGMA (INT 1, INT 10, ADD(MUL(X, X), INT 10)) in
+test t8 (485.0)
+
+[Value]
+true
+
+
+[Test]
+let t9 = SIGMA(INT 1, INT 10, (SIGMA (X, MUL(X,X), X))) in
+test t9 12694.
+
+[Value]
+true
+
