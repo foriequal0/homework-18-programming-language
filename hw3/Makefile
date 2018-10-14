@@ -1,13 +1,25 @@
+OCAMLC=ocamlc -g
+
 all: run
 
 run: lexer.cmo parser.cmo k.cmo pp.cmo main.cmo
-	ocamlc -o run lexer.cmo pp.cmo parser.cmo k.cmo main.cmo
+	$(OCAMLC) -o run lexer.cmo pp.cmo parser.cmo k.cmo main.cmo
+
+ex1: run
+	cat examples/test$(NUM).k-
+	./run examples/test$(NUM).k-
+
+ex2: run
+	./run ex2.k-
+
+ex3: run
+	./run ex3.k-
 
 k.cmo : k.ml
-	ocamlc -c k.ml
+	$(OCAMLC) -c k.ml
 
 pp.cmo : pp.ml k.cmo
-	ocamlc -c pp.ml
+	$(OCAMLC) -c pp.ml
 
 parser.ml: parser.mly k.cmo
 	ocamlyacc parser.mly
@@ -16,16 +28,16 @@ parser.mli: parser.mly
 	ocamlyacc parser.mly
 
 parser.cmi: parser.mli
-	ocamlc -c parser.mli
+	$(OCAMLC) -c parser.mli
 
 parser.cmo: parser.ml parser.cmi
-	ocamlc -c parser.ml
+	$(OCAMLC) -c parser.ml
 
 main.cmo : k.cmo main.ml
-	ocamlc -c main.ml
+	$(OCAMLC) -c main.ml
 
 lexer.cmo: lexer.ml
-	ocamlc -c lexer.ml
+	$(OCAMLC) -c lexer.ml
 
 lexer.ml: lexer.mll parser.cmo
 	ocamllex lexer.mll

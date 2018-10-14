@@ -201,7 +201,7 @@ struct
       | Addr _ -> raise (Error "TypeError : not proc") 
       | Proc (id_list, exp, env) -> (id_list, exp, env))
     with Env.Not_bound -> raise (Error "Unbound")
-
+    
   let rec eval mem env e =
     match e with
     | READ x -> 
@@ -221,7 +221,125 @@ struct
       let (v, mem') = eval mem env e in
       let l = lookup_env_loc env x in
       (v, Mem.store mem' l v)
-    | _ -> failwith "Unimplemented" (* TODO : Implement rest of the cases *)
+    | NUM x -> (Num x, mem)
+    | TRUE -> (Bool true, mem)
+    | FALSE -> (Bool false, mem)
+    | UNIT -> (Unit, mem)
+    | VAR x ->
+      let l = lookup_env_loc env x in
+      (Mem.load mem l, mem)
+    | ADD (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let int_v1 = value_int v1 in
+      let (v2, mem'') = eval mem' env e2 in
+      let int_v2 = value_int v2 in
+      (Num (int_v1 + int_v2), mem'')
+    | SUB (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let int_v1 = value_int v1 in
+      let (v2, mem'') = eval mem' env e2 in
+      let int_v2 = value_int v2 in
+      (Num (int_v1 - int_v2), mem'')
+    | MUL (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let int_v1 = value_int v1 in
+      let (v2, mem'') = eval mem' env e2 in
+      let int_v2 = value_int v2 in
+      (Num (int_v1 * int_v2), mem'')
+    | DIV (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let int_v1 = value_int v1 in
+      let (v2, mem'') = eval mem' env e2 in
+      let int_v2 = value_int v2 in
+      (Num (int_v1 / int_v2), mem'')
+    | EQUAL (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let (v2, mem'') = eval mem' env e2 in
+      (match (v1, v2) with
+       | (Num x1, Num x2) -> (Bool (x1 = x2), mem'')
+       | (Bool x1, Bool x2) -> (Bool (x1 = x2), mem'')
+       | (Unit, Unit) -> (Bool true, mem'')
+       | _ -> (Bool false, mem''))
+    | LESS (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let int_v1 = value_int v1 in
+      let (v2, mem'') = eval mem' env e2 in
+      let int_v2 = value_int v2 in
+      (Bool (int_v1 < int_v2), mem'')
+    | NOT e ->
+      let (v, mem') = eval mem env e in
+      (Bool (not (value_bool v)), mem')
+    | SEQ (e1, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      eval mem' env e2
+    | IF (econd, e1, e2) ->
+      let (cond, mem') = eval mem env econd in
+      if value_bool cond
+      then eval mem' env e1
+      else eval mem' env e2
+    | WHILE (econd, ebody) ->
+      let (cond, mem') = eval mem env econd in
+      if value_bool cond
+      then let (_, mem'') = eval mem' env ebody in eval mem'' env e
+      else (Unit, mem')
+    | LETF (id, id_list, e, s) ->
+      let env' = Env.bind env id (Proc (id_list, e, env)) in
+      eval mem env' s
+    | CALLV (id, eargs) ->
+      let (id_list, exp, fenv) = lookup_env_proc env id in
+      if List.length eargs <> List.length id_list
+      then raise (Error "InvalidArg")
+      else
+        let eval_arg (vs, mem) e = 
+          let (v, mem') = eval mem env e in
+          (vs @ [v], mem') in
+        let bind_arg (fenv, mem) (param, v) =
+          let (l, mem') = Mem.alloc mem in
+          let mem'' = Mem.store mem' l v in
+          let fenv' = Env.bind fenv param (Addr l) in
+          (fenv', mem'') in
+        let (values, mem') = List.fold_left eval_arg ([], mem) eargs in
+        let pairs = List.combine id_list values in
+        let (fenv', mem'') = List.fold_left bind_arg (fenv, mem') pairs in
+        let fenv'' = Env.bind fenv' id (Proc (id_list, exp, fenv)) in
+        eval mem'' fenv'' exp
+    | CALLR (id, rargs) ->
+      let (id_list, exp, fenv) = lookup_env_proc env id in
+      if List.length rargs <> List.length id_list
+      then raise (Error "InvalidArg")
+      else
+        let bind_arg fenv (param, arg) =
+          Env.bind fenv param (Addr (lookup_env_loc env arg)) in
+        let pairs = List.combine id_list rargs in
+        let fenv' = List.fold_left bind_arg fenv pairs in
+        let fenv'' = Env.bind fenv' id (Proc (id_list, exp, fenv)) in
+        eval mem fenv'' exp
+    | RECORD fields ->
+      if List.length fields = 0
+      then (Unit, mem)
+      else
+        let eval_field (vs, mem) (id, exp) =
+          let (v, mem') = eval mem env exp in
+          (vs @ [v], mem') in
+        let bind_field (record, mem) (id, v) =
+          let (l, mem') = Mem.alloc mem in
+          let mem'' = Mem.store mem' l v in
+          let record' id' = if id = id' then l else record id' in
+          (record', mem'') in
+        let empty x = raise (Error "TypeError: field not exist") in
+        let (values, mem') = List.fold_left eval_field ([], mem) fields in
+        let pairs = List.combine (List.map (fun (id, exp) -> id) fields) values in
+        let (record, mem'') = List.fold_left bind_field (empty, mem') pairs in
+      (Record record, mem'')
+    | FIELD (e, id) ->
+      let (v1, mem') = eval mem env e in
+      let record = value_record v1 in
+      (Mem.load mem' (record id), mem')
+    | ASSIGNF (e1, id, e2) ->
+      let (v1, mem') = eval mem env e1 in
+      let (v2, mem'') = eval mem' env e2 in
+      let record = value_record v1 in
+      (v2, Mem.store mem'' (record id) v2)
 
   let run (mem, env, pgm) = 
     let (v, _ ) = eval mem env pgm in
