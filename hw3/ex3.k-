@@ -1,0 +1,49 @@
+let empty := { tag := 0 } in
+let proc leaf (i) = { tag := 1, value := i } in
+let proc makeTree (i, l, r) = { tag := 2, value := i, left := l, right := r } in
+let proc makeLtree (i, t) = makeTree(i, t, empty) in
+let proc makeRtree (i, t) = makeTree(i, empty, t) in
+
+let proc isEmpty (t) = (t.tag = 0) in
+let proc rTree (t) = t.right in
+let proc lTree (t) = t.left in
+let proc nodeVal (t) = t.value in
+
+let proc dft (t) =
+  if t.tag = 0 then unit
+  else if t.tag = 1 then write nodeVal(t)
+  else (
+    write nodeVal(t);
+    dft (lTree(t));
+    dft (rTree(t)))
+in
+let proc bft(t) =
+  let nil := { tag := 0 } in
+  let proc cons(h, t) = { tag := 1, head := h, tail := t } in
+  let proc mkQueueWith(x) = { nodes := cons(x, nil) } in
+  let proc poppable(q) = not (q.nodes.tag = 0) in
+  let proc push(q, v) = 
+    if q.nodes.tag = 0 then q.nodes := cons(v, nil)
+    else (
+      let proc recurse(l, v) =
+        if l.tail.tag = 0 then l.tail := cons(v, nil)
+        else recurse(l.tail, v) in
+      recurse(q.nodes, v)
+    )
+  in
+  let proc pop(q) =
+    let head := q.nodes.head in
+    q.nodes := q.nodes.tail;
+    head
+  in
+  let q := mkQueueWith(t) in
+  while poppable(q) do (
+    let head := pop(q) in
+    if not (isEmpty(head)) then write (nodeVal(head)) else unit;
+    if head.tag = 2 then (
+      push(q, lTree(head));
+      push(q, rTree(head)))
+    else unit
+  )
+in
+	2018
