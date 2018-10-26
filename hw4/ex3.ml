@@ -56,7 +56,7 @@ let update env existing reqs =
   List.sort_uniq compare (List.flatten (existing :: collect_all_items reqs))
 
 let shoppingList: require list -> (id * gift list) list = fun reqs -> begin
-    let ids = [A; B; C; D; E] in
+  let ids = [A; B; C; D; E] in
   let reqs = fill_empty ids (merges reqs) in
   let deps = collect_deps reqs in
 
