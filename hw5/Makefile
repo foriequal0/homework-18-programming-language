@@ -3,6 +3,9 @@ all: run
 run: lexer.cmo parser.cmo sm5.cmo k.cmo translate.cmo pp.cmo main.cmo
 	ocamlc -o run lexer.cmo pp.cmo parser.cmo sm5.cmo translate.cmo k.cmo main.cmo
 
+gc_test: lexer.cmo parser.cmo sm5.cmo k.cmo translate.cmo pp.cmo gc_test.cmo
+	ocamlc -o gc_test $^
+
 k.cmo : k.ml
 	ocamlc -c k.ml
 
@@ -30,6 +33,9 @@ parser.cmo: parser.ml parser.cmi
 main.cmo : translate.cmo main.ml
 	ocamlc -c main.ml
 
+gc_test.cmo: gc_test.ml translate.cmo
+	ocamlc -c $<
+
 lexer.cmo: lexer.ml
 	ocamlc -c lexer.ml
 
@@ -37,4 +43,4 @@ lexer.ml: lexer.mll parser.cmo
 	ocamllex lexer.mll
 
 clean:
-	rm -f *.cmx *.cmi parser.mli parser.ml lexer.ml run *.o *.cmo
+	rm -f *.cmx *.cmi parser.mli parser.ml lexer.ml run gc_test *.o *.cmo

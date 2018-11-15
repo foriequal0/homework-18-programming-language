@@ -210,9 +210,42 @@ struct
       ((!loc_id, 0), m)
     else
       let _ = reachable_locs := [] in
-      (* TODO : Add the code that marks the reachable locations.
-       * let _ = ... 
-       *)
+      let reachable x =
+        let (base, offset) = x in
+        List.iter (fun (loc, _) ->
+            let (base', _) = loc in
+            if base = base' && not (List.mem loc !reachable_locs) then
+              reachable_locs := loc :: !reachable_locs;)
+          m
+      in
+      let rec reachable_from_value = function
+        | L loc -> (reachable loc; reachable_from_value (load loc m))
+        | R assoc -> List.iter (fun (_, loc) -> reachable loc; reachable_from_value (load loc m)) assoc
+        | _ -> ()
+      and reachable_from_proc (_, cmds, closure) =
+        reachable_from_continuation cmds closure
+      and reachable_from_m (_, evalue) =
+        reachable_from_evalue evalue
+      and reachable_from_evalue = function
+        | Loc l -> reachable l; reachable_from_value (load l m)
+        | Proc p -> reachable_from_proc p
+      and reachable_from_continuation cont env =
+        List.iter (fun (_, evalue) -> reachable_from_evalue evalue) env;
+      and reachable_from_current_continuation cont env k =
+        reachable_from_continuation cont env;
+        match k with
+        | (c, e') :: k' -> reachable_from_current_continuation c e' k'
+        | [] -> ()
+      in
+      let reachable_from_stack =
+        List.iter (function
+            | V value -> reachable_from_value value
+            | P proc -> reachable_from_proc proc
+            | M m -> reachable_from_m m) in
+
+      reachable_from_stack s;
+      reachable_from_current_continuation c e k;
+
       let new_m = List.filter (fun (l, _) -> List.mem l !reachable_locs) m in
       if List.length new_m < mem_limit then
         let _ = loc_id := !loc_id + 1 in
